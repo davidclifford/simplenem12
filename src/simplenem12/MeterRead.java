@@ -67,7 +67,7 @@ public class MeterRead {
     return Objects.hash(getNmi());
   }
 
-  BigDecimal getTotalVolume() {
+  public BigDecimal getTotalVolume() {
     return volumes.values().stream()
       .map(mr -> mr.getVolume())
       .reduce(BigDecimal.ZERO, BigDecimal::add);

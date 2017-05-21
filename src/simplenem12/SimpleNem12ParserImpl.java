@@ -15,55 +15,65 @@ import java.util.stream.Collectors;
  */
 public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 
-    Collection<MeterRead> meterReads = null;
-    MeterRead meterRead = null;
+    private Collection<MeterRead> meterReads = null;
+    private MeterRead meterRead = null;
 
     @Override
-    public Collection<MeterRead> parseSimpleNem12(File simpleNem12File) throws ParsingException {
+    public Collection<MeterRead> parseSimpleNem12(File simpleNem12File) {
+        List<String[]> lines = null;
 
-        List<String[]> lines = loadCsvFile(simpleNem12File);
-        parseFile(lines);
+        try {
+            lines = loadCsvFile(simpleNem12File);
+        } catch (FileNotFoundException ex) {
+            System.out.printf("File %s not found\n",simpleNem12File.getName());
+            System.exit(1);
+        }
+
+        try {
+            parseLines(lines);
+        } catch (ParsingException ex) {
+            System.out.println(ex.getMessage());
+            System.exit(2);
+        }
         return meterReads;
     }
 
-    private List<String[]> loadCsvFile(File simpleNem12File) {
+    public List<String[]> loadCsvFile(File simpleNem12File) throws FileNotFoundException {
 
-        List<String[]> lines = null;
-        try {
-            InputStream inputFS = new FileInputStream(simpleNem12File);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputFS));
-            lines = reader
-                    .lines()
-                    .map(line -> line.split(","))
-                    .collect(Collectors.toList());
-        } catch (FileNotFoundException ex) {
-            System.out.printf("File %s not found\n",simpleNem12File.getName());
-        }
+        List<String[]> lines;
+
+        InputStream inputFS = new FileInputStream(simpleNem12File);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputFS));
+
+        lines = reader
+                .lines()
+                .map(line -> line.split(","))
+                .collect(Collectors.toList());
+
         return lines;
     }
 
-    private void parseFile(List<String[]> lines) throws ParsingException {
+    public void parseLines(List<String[]> lines) throws ParsingException {
 
         int currentLine = 0;
-        for(String line[] : lines) {
+        for (String line[] : lines) {
 
             currentLine++;
             String recordType = line[0];
 
-            if (currentLine==1) {
+            if (currentLine == lines.size() && !recordType.equals("900")) {
+                throwParsingError(currentLine,"Last line must be a 900 record type");
+            }
+            if (currentLine == 1) {
                 parse100(recordType, currentLine);
-            }
-            else if (recordType.equals("200")) {
-                parse200( line, currentLine);
-            }
-            else if (recordType.equals("300")) {
+            } else if (recordType.equals("200")) {
+                parse200(line, currentLine);
+            } else if (recordType.equals("300")) {
                 parse300(line, currentLine);
-            }
-            else if (recordType.equals("900")) {
+            } else if (recordType.equals("900")) {
                 parse900(currentLine, lines.size());
-            }
-            else {
-                throwParsingError(currentLine,String.format("Unknown record type %s",recordType));
+            } else {
+                throwParsingError(currentLine, String.format("Unknown record type %s", recordType));
             }
         }
     }
@@ -97,7 +107,7 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
 
     private void parse900(int currentLine, int totalLines)  throws ParsingException {
         if(currentLine != totalLines) {
-            throwParsingError(currentLine,"Last line must be a 900 record");
+            throwParsingError(currentLine,"Last line must be a 900 record type");
         }
     }
 
@@ -135,7 +145,7 @@ public class SimpleNem12ParserImpl implements SimpleNem12Parser {
         try {
             localDate = LocalDate.parse(ld, DateTimeFormatter.BASIC_ISO_DATE);
         } catch (DateTimeParseException ex) {
-            throwParsingError(currentLine, "Date %s has incorrect format");
+            throwParsingError(currentLine, String.format("Date %s has incorrect format",ld));
         }
         return localDate;
     }
