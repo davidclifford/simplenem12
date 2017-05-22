@@ -1,6 +1,5 @@
 package test;
 
-import org.junit.Before;
 import org.junit.Test;
 import simplenem12.MeterRead;
 import simplenem12.ParsingException;
